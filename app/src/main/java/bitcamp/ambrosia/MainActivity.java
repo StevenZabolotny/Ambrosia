@@ -1,6 +1,10 @@
 package bitcamp.ambrosia;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -58,6 +62,7 @@ import java.util.HashMap;
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
     private File cache;
 
+    private final int MIN_STORY_WORD_COUNT = 20;
     private DisorderParser disorderParser;
     private LocationManager locationManager;
     private Location currentLocation;
@@ -151,6 +156,19 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             "Do you need me to contact emergency services for you?"
     };
 
+    String transitions[] = {
+            "Go on.",
+            "Tell me more.",
+            "What else can you tell me?",
+            "I'm listening.",
+            "Uh-huh.",
+            "Yeah...",
+            "I want to hear more from you.",
+            "Keep going.",
+            "Interesting...",
+            "And then what happened?"
+    };
+
     // Variables related to list
     private ListView messagesListView;
     private MessagesListAdapter messagesListAdapter;
@@ -167,6 +185,14 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     private String name;
     private ArrayList<String> history;
+
+    private double sadtot;
+    private double joytot;
+    private double featot;
+    private double madtot;
+    private double distot;
+    private int wordcount;
+    private int entries;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -186,7 +212,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             messages = savedInstanceState.getParcelableArrayList("messages");
         }
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        /*NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        Intent intent = new Intent(this, BroadcastReceiver.class);
+        PendingIntent pintent = PendingIntent.getActivity(this, (int)System.currentTimeMillis(), intent, 0);
+        Notification n = new Notification.Builder(this).setContentTitle(name + ", feeling lonely?").setContentText("Ambrosia would like to talk to you!").setAutoCancel(false).build();
+        notificationManager.notify(0, n);*/
+
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
         listenForLocationChanges();
 
@@ -356,13 +388,20 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        String[] inputs = inputc.split(" ");
+                        wordcount += inputs.length;
+                        entries++;
                         DocumentEmotionResults der = response.getEmotion().getDocument();
                         DocumentSentimentResults dsr = response.getSentiment().getDocument();
                         List<ConceptsResult> cr = response.getConcepts();
                         List<CategoriesResult> ctr = response.getCategories();
                         String message = "";
                         if (!emergencyCheck(inputc, cr, ctr)) {
-                            message = chooseResponse(der, dsr, cr, ctr);
+                            if (inputc.charAt(inputc.length() - 1) == '?') {
+                                message = "Don't worry about me, I'm here to hear about you.";
+                            } else {
+                                message = chooseResponse(der, dsr, cr, ctr);
+                            }
                         } else {
                             message = "EMERGENCY DETECTED! If you are thinking about hurting yourself or anyone else or believe that you are not in a good state of mind, please:\nCall 911 for Emergency Services\nText CONNECT to 741741 for Mental Health Hotlines\nCall 1-800-273-8255 for the National Suicide Prevention Lifeline.";
                         }
@@ -392,8 +431,34 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         double fea = der.getEmotion().getFear();
         double mad = der.getEmotion().getAnger();
         double dis = der.getEmotion().getDisgust();
+
+        sadtot += sad;
+        joytot += joy;
+        featot += fea;
+        madtot += mad;
+        distot += dis;
+
+        if (wordcount <= MIN_STORY_WORD_COUNT) {
+            Random r = new Random();
+            int pick = (int)Math.floor(r.nextDouble() * 10);
+            return transitions[pick];
+        }
+
+        sad = sadtot / entries;
+        joy = joytot / entries;
+        fea = featot / entries;
+        mad = madtot / entries;
+        dis = distot / entries;
         double avg = (sad + joy + fea + mad + dis) / 5.0;
         double max = Math.max(Math.max(Math.max(Math.max(sad, joy), fea), mad), dis);
+
+        sadtot = 0;
+        joytot = 0;
+        featot = 0;
+        madtot = 0;
+        distot = 0;
+        wordcount = 0;
+        entries = 0;
 
         String message = "";
         double mod = ((max - avg) / 0.8);

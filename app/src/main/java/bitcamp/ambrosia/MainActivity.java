@@ -13,6 +13,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ibm.watson.developer_cloud.http.ServiceCallback;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.NaturalLanguageUnderstanding;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalysisResults;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalyzeOptions;
@@ -135,13 +136,23 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         EmotionOptions emotions = new EmotionOptions.Builder().build();
         Features features = new Features.Builder().emotion(emotions).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
-        AnalysisResults results = nlu.analyze(parameters).execute();
-        sendFromAmbrosia(results.getAnalyzedText());
-        String res = "";
-        DocumentEmotionResults der = results.getEmotion().getDocument();
-        DocumentSentimentResults ser = results.getSentiment().getDocument();
-        messagesListAdapter.add(new Message(true, res));
-        messagesListAdapter.notifyDataSetChanged();
+        nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
+            @Override
+            public void onResponse(AnalysisResults response) {
+                sendFromAmbrosia(response.getAnalyzedText());
+                String res = "";
+                DocumentEmotionResults der = response.getEmotion().getDocument();
+                DocumentSentimentResults ser = response.getSentiment().getDocument();
+                messagesListAdapter.add(new Message(true, res));
+                messagesListAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+
+            }
+        });
+
     }
 
     @Override

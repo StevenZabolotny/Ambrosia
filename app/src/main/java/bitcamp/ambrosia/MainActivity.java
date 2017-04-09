@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -34,9 +35,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private ArrayList<Message> messages;
 
     // Variables related to user input
-    private Button sttButton;
-    private Button sendButton;
-    private EditText editText;
+    ImageButton sttButton;
+    Button sendButton;
+    EditText editText;
 
     private TextToSpeech tts;
     private NaturalLanguageUnderstanding nlu;
@@ -64,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         start();
 
-        sttButton = (Button) findViewById(R.id.button_stt);
+        sttButton = (ImageButton) findViewById(R.id.button_stt);
         sendButton = (Button) findViewById(R.id.button_send);
         editText = (EditText) findViewById(R.id.text_edit);
 

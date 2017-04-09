@@ -9,25 +9,31 @@
     <ListView
         android:id="@+id/list_messages"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/interface_input"/>
+        android:layout_height="match_parent"
+        android:divider="@null"
+        android:layout_above="@+id/interface_input" />
 
     <LinearLayout
         android:id="@+id/interface_input"
         android:layout_alignParentBottom="true"
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="100dp">
+        android:layout_height="60dp">
+
         <EditText
-            android:layout_width="200dp"
+            android:layout_weight="4"
+            android:layout_width="300dp"
             android:layout_height="match_parent"
             android:id="@+id/text_edit" />
-        <Button
+
+        <ImageButton
+            android:layout_weight="1"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:id="@+id/button_stt"
-            android:text="STT" />
+            android:src="@drawable/stt" />
         <Button
+            android:layout_weight="1"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:id="@+id/button_send"

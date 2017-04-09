@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
@@ -39,12 +40,90 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             "How are you doing today?",
             "Do you have anything planned today?",
             "How was your day today?",
-            "What's up?"
+            "What's up?",
+            "How's it going?"
     };
 
     String sadMessages[] = {
-            "I'm sorry to hear that."
+            "Don't worry, it'll be alright.",
+            "That sucks...",
+            "I'm sorry to hear that.",
+            "I hope you feel better.",
+            "Oh... :(",
+            "I can’t really understand what you are feeling, but I can offer my compassion."
     };
+
+    String sadQuestions[] = {
+            "Is there anything that can take your mind off of it?",
+            "You can always talk to me or any of your friends about it.",
+            "Do you want a hug? :)",
+            "Maybe tomorrow will be better?",
+            "Maybe there's a good side to it?"
+    };
+
+    String happyMessages[] = {
+            "Nice!",
+            "I'm happy for you.",
+            "You sound excited.",
+            "Wow, that sounds great!",
+            "I'm glad things are going your way."
+    };
+
+    String happyQuestions[] = {
+            "Tell me more.",
+            "Do you have any other interestng stories?",
+            "Any other good news?",
+            "What do you like to do when you're in a good mood?",
+            "I'm hoping tomorrow will be a good day, too."
+    };
+
+    String angryMessages[] = {
+            "You sound excited.",
+            "Calm down. It's okay.",
+            "You should just close your eyes and listen to some music.",
+            "It's okay to vent about it if you want.",
+            "Sometimes things can be frustrating."
+    };
+
+    String angryQuestions[] = {
+            "Tell me more.",
+            "Did anything else happen after that?",
+            "Are you angry?",
+            "What else grinds your gears?",
+            "I hope you're not planning on making a hasty decision..."
+    };
+
+    String disgustMessages[] = {
+            "Weird...",
+            "I don't think I would like that very much either.",
+            "That sounds gross.",
+            "I hope that didn't make you uncomfortable.",
+            "Ugh, that sounds disgusting"
+    };
+
+    String disgustQuestions[] = {
+            "Can you be more descriptive?",
+            "What else happened?",
+            "I can't tell if that's a good thing or a bad thing.",
+            "I wonder what it was like...",
+            "What can you do about it?"
+    };
+
+    String fearMessages[] = {
+            "That's really not cool.",
+            "I hope you're safe.",
+            "I wish I could help you...",
+            "That sounds frightening!",
+            "Oh my god, I'd faint if that happened to me!"
+    };
+
+    String fearQuestions[] = {
+            "What did you do after?",
+            "Are you alright?",
+            "I hope everyone is safe...",
+            "Do you have any friends you can ask for help?"
+            "Do you need me to contact emergency services for you?"
+    }
 
     // Variables related to list
     private ListView messagesListView;
@@ -61,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     private File cache;
     private String name;
-    private HashMap<String, int> disorders;
+    private HashMap<String, Integer> disorders;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

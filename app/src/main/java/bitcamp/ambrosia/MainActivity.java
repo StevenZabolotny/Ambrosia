@@ -1,11 +1,16 @@
 package bitcamp.ambrosia;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -51,6 +56,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private File cache;
 
     private DisorderParser disorderParser;
+    private LocationManager locationManager;
+    private Location currentLocation;
 
     String conversationStarters[] = {
             "How are you doing today?",
@@ -164,28 +171,33 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         setContentView(R.layout.activity_main);
         final SharedPreferences sp = getSharedPreferences("", Context.MODE_PRIVATE);
-        if(savedInstanceState == null) {
+        if (savedInstanceState == null) {
             // If the instance is null, this app was just opened
             // Set the messages list to a new empty one
-                disorderParser = new DisorderParser();
-                messages = new ArrayList<Message>();
+            disorderParser = new DisorderParser();
+            messages = new ArrayList<Message>();
 
-                reloadPastMessages();
+            reloadPastMessages();
         } else {
             // Load messages from savedState
             messages = savedInstanceState.getParcelableArrayList("messages");
         }
 
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        listenForLocationChanges();
+
         history = new ArrayList<String>();
         cache = new File(this.getFilesDir(), "cache.txt");
         try {
             BufferedReader r = new BufferedReader(new FileReader(cache));
-            while(r.ready()) {
+            while (r.ready()) {
                 history.add(r.readLine());
             }
             r.close();
-        } catch(IOException e) {}
-        for (String s:history) {
+        } catch (IOException e) {
+        }
+        for (String s : history) {
             Log.d("test", s + "\n");
         }
 
@@ -199,9 +211,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         nlu.setEndPoint("https://gateway.watsonplatform.net/natural-language-understanding/api");
 
         name = sp.getString("name", "");
-        if("".equals(name)) {
+        if ("".equals(name)) {
             sendFromAmbrosia("Hello, my name is Ambrosia. I'm a personal chatbot with an emphasis on mental health. What's your name?");
-        } else if(savedInstanceState == null) {
+        } else if (savedInstanceState == null) {
             sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
         }
 
@@ -231,12 +243,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     w.write(date.getTime() + " U " + userInput);
                     w.close();
                 } catch (FileNotFoundException e) {
-                } catch (IOException e) {}
+                } catch (IOException e) {
+                }
 
-                if(userInput.length() > 0) {
+                if (userInput.length() > 0) {
                     messagesListAdapter.add(new Message(false, userInput));
                     messagesListAdapter.notifyDataSetChanged();
-                    if(!"".equals(name)) {
+                    if (!"".equals(name)) {
                         processInput(userInput);
                     } else {
                         name = userInput;
@@ -258,10 +271,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == 1 && resultCode == RESULT_OK) {
+        if (requestCode == 1 && resultCode == RESULT_OK) {
             ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
             //if(results.size() == 0 || results.size() > 2) {
-            if(results.size() == 0) {
+            if (results.size() == 0) {
                 Toast.makeText(this, "Sorry, Try speaking a bit clearer", Toast.LENGTH_LONG).show();
             } else {
                 editText.getText().clear();
@@ -276,8 +289,33 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     }
 
-    private void getLocation() {
-        LocationManager locationManager;
+    private void listenForLocationChanges() {
+        LocationListener locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                currentLocation = location;
+                Toast.makeText(MainActivity.this, String.valueOf(currentLocation.getLatitude()), Toast.LENGTH_LONG).show();
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            public void onProviderEnabled(String provider) {
+            }
+
+            public void onProviderDisabled(String provider) {
+            }
+        };
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
     }
 
     @Override

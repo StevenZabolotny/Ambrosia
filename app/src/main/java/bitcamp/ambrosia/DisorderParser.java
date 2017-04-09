@@ -159,5 +159,45 @@ public class DisorderParser {
     public int getWeight(String key) {
         return disorders.get(key);
     }
+	
+	public String checkWeights();
+	{
+		if(getWeight("anxiety") >= 3)
+		{
+			return "anxiety";
+		}
+		else if(getWeight("mood") >= 3)
+		{
+			return "mood";
+		}
+		else if(getWeight("psychotic") >= 3)
+		{
+			return "psychotic";
+		}
+		else if(getWeight("eating") >= 3)
+		{
+			return "eating";
+		}
+		else if(getWeight("impulse") >= 3)
+		{
+			return "impulse";
+		}
+		else if(getWeight("personality") >= 3)
+		{
+			return "personality";
+		}
+		else if(getWeight("ocd") >= 3)
+		{
+			return "ocd";
+		}
+		else if(getWeight("ptsd") >= 3)
+		{
+			return "ptsd";
+		}
+		else
+		{
+			return "";
+		}
+	}
 
 }

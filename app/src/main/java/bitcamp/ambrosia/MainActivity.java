@@ -21,6 +21,8 @@ import com.ibm.watson.developer_cloud.http.ServiceCallback;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.NaturalLanguageUnderstanding;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalysisResults;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalyzeOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.CategoriesOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.CategoriesResult;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.ConceptsOptions;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.ConceptsResult;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.DocumentEmotionResults;
@@ -41,6 +43,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -185,9 +188,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
             r.close();
         } catch(IOException e) {}
-        for (String s:history) {
-            Log.d("test", s + "\n");
-        }
 
         messagesListAdapter = new MessagesListAdapter(this, messages);
         messagesListView = (ListView) findViewById(R.id.list_messages);
@@ -306,10 +306,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     // Analyze input and then send a message back from Ambrosia
     private void processInput(String input) {
+        final String inputc = input;
+        CategoriesOptions categories = new CategoriesOptions();
         SentimentOptions sentiment = new SentimentOptions.Builder().build();
         EmotionOptions emotions = new EmotionOptions.Builder().build();
         ConceptsOptions concepts = new ConceptsOptions.Builder().build();
-        Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).build();
+        Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).categories(categories).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
         nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
@@ -320,7 +322,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         DocumentEmotionResults der = response.getEmotion().getDocument();
                         DocumentSentimentResults dsr = response.getSentiment().getDocument();
                         List<ConceptsResult> cr = response.getConcepts();
-                        String message = chooseResponse(der, dsr, cr);
+                        List<CategoriesResult> ctr = response.getCategories();
+                        String message = "";
+                        if (!emergencyCheck(inputc, cr, ctr)) {
+                            message = chooseResponse(der, dsr, cr, ctr);
+                        } else {
+                            message = "EMERGENCY DETECTED! If you are thinking about hurting yourself or anyone else or believe that you are not in a good state of mind, please:\nCall 911 for Emergency Services\nText CONNECT to 741741 for Mental Health Hotlines\nCall 1-800-273-8255 for the National Suicide Prevention Lifeline.";
+                        }
                         sendFromAmbrosia(message);
                     }
                 });
@@ -340,7 +348,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     }
 
-    private String chooseResponse(DocumentEmotionResults der, DocumentSentimentResults dsr, List<ConceptsResult> cr) {
+    private String chooseResponse(DocumentEmotionResults der, DocumentSentimentResults dsr, List<ConceptsResult> cr, List<CategoriesResult> ctr) {
         double sent = dsr.getScore();
         double sad = der.getEmotion().getSadness();
         double joy = der.getEmotion().getJoy();
@@ -391,6 +399,33 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private int getRandomNumber(int l, int h) {
         Random r = new Random();
         return r.nextInt(h - l) + l;
+    }
+
+    private boolean emergencyCheck(String input, List<ConceptsResult> cr, List<CategoriesResult> ctr) {
+        String[] sa = input.split(" ");
+        ArrayList<String> s = new ArrayList<String>();
+        for (int i = 0;i < sa.length;i++) {
+            s.add(sa[i]);
+        }
+        ArrayList<String> crs = new ArrayList<String>();
+        for (int i = 0;i < cr.size();i++) {
+            crs.add(cr.get(i).getText());
+        }
+        ArrayList<String> ctrs = new ArrayList<String>();
+        for (int i = 0;i < ctr.size();i++) {
+            ctrs.add(ctr.get(i).getLabel());
+            //Toast.makeText(this, ctrs.get(i), Toast.LENGTH_SHORT).show();
+        }
+        boolean self = false;
+        boolean emergency = false;
+        if (s.contains("myself") || s.contains("me") || s.contains("I")) {
+            self = true;
+        }
+        if (self && ((crs.contains("kill") || crs.contains("violence") || crs.contains("suicide") || crs.contains("hurt"))
+            || (s.contains("kill") || s.contains("violence") || s.contains("suicide") || s.contains("hurt")))) {
+            emergency = true;
+        }
+        return emergency;
     }
 
     @Override

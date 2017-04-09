@@ -3,6 +3,7 @@ package bitcamp.ambrosia;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.location.LocationManager;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
@@ -41,6 +42,8 @@ import java.util.Random;
 import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
+
+    private DisorderParser disorderParser;
 
     String conversationStarters[] = {
             "How are you doing today?",
@@ -146,7 +149,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private NaturalLanguageUnderstanding nlu;
 
     private String name;
-    private HashMap<String, Integer> disorders;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,7 +159,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         if(savedInstanceState == null) {
             // If the instance is null, this app was just opened
             // Set the messages list to a new empty one
+                disorderParser = new DisorderParser();
                 messages = new ArrayList<Message>();
+
                 reloadPastMessages();
         } else {
             // Load messages from savedState
@@ -254,6 +258,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     }
 
+    private void getLocation() {
+        LocationManager locationManager;
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -276,7 +284,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         ConceptsOptions concepts = new ConceptsOptions.Builder().build();
         Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
-        /*nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
+        nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
             public void onResponse(final AnalysisResults response) {
                 runOnUiThread(new Runnable() {
@@ -307,7 +315,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     }
                 });
             }
-        });*/
+        });
 
     }
 

@@ -40,6 +40,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
+import java.io.PrintWriter;
+import java.nio.Buffer;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -49,6 +51,7 @@ import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
     private File cache;
+    private File resp; // File that contains the hard coded responses
 
     private DisorderParser disorderParser;
 
@@ -157,6 +160,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     private String name;
     private ArrayList<String> history;
+    private CSString respin;
+    private CSString respout;
+    private String prevInput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -185,9 +191,31 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
             r.close();
         } catch(IOException e) {}
+        /*
         for (String s:history) {
             Log.d("test", s + "\n");
-        }
+        }*/
+        // Opening response file
+        resp = new File(this.getFilesDir(), "resp.txt");
+        respin = new CSString();
+        respout = new CSString();
+        prevInput = new String();
+        try {
+            BufferedReader r = new BufferedReader(new FileReader(resp));
+            while(r.ready()) {
+                // String is formated "Input : Output"
+                String line = r.readLine();
+                try {
+                    String[] parts = line.split(" : ");
+                    respin.add(parts[0]);
+                    respout.add(parts[1]);
+                } catch(NullPointerException e) {
+                    messagesListAdapter.add(new Message(false, "Resp.txt file parsing error."));
+                    messagesListAdapter.notifyDataSetChanged();
+                }
+            }
+            r.close();
+        } catch(IOException e) {}
 
         messagesListAdapter = new MessagesListAdapter(this, messages);
         messagesListView = (ListView) findViewById(R.id.list_messages);
@@ -229,22 +257,86 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     Date date = new Date();
                     BufferedWriter w = new BufferedWriter(new FileWriter(cache, true));
                     w.write(date.getTime() + " U " + userInput);
+                    w.newLine();
                     w.close();
                 } catch (FileNotFoundException e) {
                 } catch (IOException e) {}
 
+
+
                 if(userInput.length() > 0) {
-                    messagesListAdapter.add(new Message(false, userInput));
-                    messagesListAdapter.notifyDataSetChanged();
-                    if(!"".equals(name)) {
-                        processInput(userInput);
-                    } else {
-                        name = userInput;
-                        SharedPreferences.Editor editor = sp.edit();
-                        editor.putString("name", name);
-                        editor.commit();
-                        sendFromAmbrosia("Hello, " + name + "!");
-                        sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
+                    if (userInput.toLowerCase().contains("/read")) {
+                        try {
+                            BufferedReader r = new BufferedReader(new FileReader(resp));
+                            while(r.ready()) {
+                                // String is formated "Input : Output"
+                                String line = r.readLine();
+                                Log.d("aaa", line);
+                            }
+                            r.close();
+                        } catch(IOException e) {}
+                    } else if (userInput.toLowerCase().contains("/clear")) {
+                        try {
+                            PrintWriter pw = new PrintWriter(resp);
+                            pw.close();
+                            respin = new CSString();
+                            respout = new CSString();
+                        } catch (FileNotFoundException e) {
+
+                        }
+                    } else if (userInput.toLowerCase().contains("/add ")) {
+                        // Should replace if prevInput is in respin
+                        if (respin.contains(prevInput)) {
+                            try {
+                                // just rewrite into resp
+                                BufferedWriter w = new BufferedWriter(new FileWriter(cache, false));
+                                respout.set(respin.indexOf(prevInput), userInput.replace("/add ", ""));
+                                for (int i=0; i<respin.size(); i++) {
+                                    w.write(respin.get(i) + " : " + respout.get(i));
+                                    w.newLine();
+                                }
+                                w.close();
+                            } catch (FileNotFoundException e) {}
+                            catch (IOException e) {}
+
+                        } else {
+                            String formated = userInput.replace("/add ", "");
+                            respin.add(prevInput);
+                            respout.add(formated);
+
+                            try {
+                                BufferedWriter w = new BufferedWriter(new FileWriter(resp, true));
+                                w.write(prevInput + " : " + formated);
+                                w.newLine();
+                                w.close();
+                            } catch (FileNotFoundException e) {
+                            } catch (IOException e) {
+                            }
+                        }
+                    } else if (respin.contains(userInput)) {
+                        // Need to parse userinput for trash later and refine compare method
+                        prevInput = userInput;
+                        messagesListAdapter.add(new Message(false, userInput));
+                        messagesListAdapter.notifyDataSetChanged();
+
+                        int iof = respin.indexOf(userInput);
+                        String returnString = respout.get(iof);
+                        sendFromAmbrosia(returnString);
+                    }
+                    else {
+                        prevInput = userInput;
+                        messagesListAdapter.add(new Message(false, userInput));
+                        messagesListAdapter.notifyDataSetChanged();
+                        if (!"".equals(name)) {
+                            processInput(userInput);
+                        } else {
+                            name = userInput;
+                            SharedPreferences.Editor editor = sp.edit();
+                            editor.putString("name", name);
+                            editor.commit();
+                            sendFromAmbrosia("Hello, " + name + "!");
+                            sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
+                        }
                     }
                     editText.getText().clear();
                 }
@@ -291,6 +383,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             Date date = new Date();
             BufferedWriter w = new BufferedWriter(new FileWriter(cache, true));
             w.write(date.getTime() + " A " + s);
+            w.newLine();
             w.close();
         } catch (FileNotFoundException e) {
         } catch (IOException e) {}
@@ -397,6 +490,24 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     public void onInit(int status) {
         if(status == TextToSpeech.SUCCESS) {
             tts.setLanguage(Locale.ENGLISH);
+        }
+    }
+
+    public class CSString extends ArrayList<String> {
+        @Override
+        public int indexOf(Object o) {
+            String str = (String) o;
+            for (int i = 0; i<this.size(); i++) {
+                if (str.replaceAll("[^a-zA-Z]", "").equalsIgnoreCase(this.get(i).replaceAll("[^a-zA-Z]", ""))) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return indexOf(o) >= 0;
         }
     }
 }

@@ -1,11 +1,16 @@
 package bitcamp.ambrosia;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,6 +26,8 @@ import com.ibm.watson.developer_cloud.http.ServiceCallback;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.NaturalLanguageUnderstanding;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalysisResults;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalyzeOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.CategoriesOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.CategoriesResult;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.ConceptsOptions;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.ConceptsResult;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.DocumentEmotionResults;
@@ -43,6 +50,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.nio.Buffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +62,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private File resp; // File that contains the hard coded responses
 
     private DisorderParser disorderParser;
+    private LocationManager locationManager;
+    private Location currentLocation;
 
     String conversationStarters[] = {
             "How are you doing today?",
@@ -170,23 +180,27 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         setContentView(R.layout.activity_main);
         final SharedPreferences sp = getSharedPreferences("", Context.MODE_PRIVATE);
-        if(savedInstanceState == null) {
+        if (savedInstanceState == null) {
             // If the instance is null, this app was just opened
             // Set the messages list to a new empty one
-                disorderParser = new DisorderParser();
-                messages = new ArrayList<Message>();
+            disorderParser = new DisorderParser();
+            messages = new ArrayList<Message>();
 
-                reloadPastMessages();
+            reloadPastMessages();
         } else {
             // Load messages from savedState
             messages = savedInstanceState.getParcelableArrayList("messages");
         }
 
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        listenForLocationChanges();
+
         history = new ArrayList<String>();
         cache = new File(this.getFilesDir(), "cache.txt");
         try {
             BufferedReader r = new BufferedReader(new FileReader(cache));
-            while(r.ready()) {
+            while (r.ready()) {
                 history.add(r.readLine());
             }
             r.close();
@@ -227,9 +241,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         nlu.setEndPoint("https://gateway.watsonplatform.net/natural-language-understanding/api");
 
         name = sp.getString("name", "");
-        if("".equals(name)) {
+        if ("".equals(name)) {
             sendFromAmbrosia("Hello, my name is Ambrosia. I'm a personal chatbot with an emphasis on mental health. What's your name?");
-        } else if(savedInstanceState == null) {
+        } else if (savedInstanceState == null) {
             sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
         }
 
@@ -260,7 +274,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     w.newLine();
                     w.close();
                 } catch (FileNotFoundException e) {
-                } catch (IOException e) {}
+                } catch (IOException e) {
+                }
 
 
 
@@ -350,10 +365,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == 1 && resultCode == RESULT_OK) {
+        if (requestCode == 1 && resultCode == RESULT_OK) {
             ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
             //if(results.size() == 0 || results.size() > 2) {
-            if(results.size() == 0) {
+            if (results.size() == 0) {
                 Toast.makeText(this, "Sorry, Try speaking a bit clearer", Toast.LENGTH_LONG).show();
             } else {
                 editText.getText().clear();
@@ -368,8 +383,33 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     }
 
-    private void getLocation() {
-        LocationManager locationManager;
+    private void listenForLocationChanges() {
+        LocationListener locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                currentLocation = location;
+                Toast.makeText(MainActivity.this, String.valueOf(currentLocation.getLatitude()), Toast.LENGTH_LONG).show();
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            public void onProviderEnabled(String provider) {
+            }
+
+            public void onProviderDisabled(String provider) {
+            }
+        };
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
     }
 
     @Override
@@ -399,10 +439,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     // Analyze input and then send a message back from Ambrosia
     private void processInput(String input) {
+        final String inputc = input;
+        CategoriesOptions categories = new CategoriesOptions();
         SentimentOptions sentiment = new SentimentOptions.Builder().build();
         EmotionOptions emotions = new EmotionOptions.Builder().build();
         ConceptsOptions concepts = new ConceptsOptions.Builder().build();
-        Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).build();
+        Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).categories(categories).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
         nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
@@ -413,7 +455,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         DocumentEmotionResults der = response.getEmotion().getDocument();
                         DocumentSentimentResults dsr = response.getSentiment().getDocument();
                         List<ConceptsResult> cr = response.getConcepts();
-                        String message = chooseResponse(der, dsr, cr);
+                        List<CategoriesResult> ctr = response.getCategories();
+                        String message = "";
+                        if (!emergencyCheck(inputc, cr, ctr)) {
+                            message = chooseResponse(der, dsr, cr, ctr);
+                        } else {
+                            message = "EMERGENCY DETECTED! If you are thinking about hurting yourself or anyone else or believe that you are not in a good state of mind, please:\nCall 911 for Emergency Services\nText CONNECT to 741741 for Mental Health Hotlines\nCall 1-800-273-8255 for the National Suicide Prevention Lifeline.";
+                        }
                         sendFromAmbrosia(message);
                     }
                 });
@@ -433,7 +481,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     }
 
-    private String chooseResponse(DocumentEmotionResults der, DocumentSentimentResults dsr, List<ConceptsResult> cr) {
+    private String chooseResponse(DocumentEmotionResults der, DocumentSentimentResults dsr, List<ConceptsResult> cr, List<CategoriesResult> ctr) {
         double sent = dsr.getScore();
         double sad = der.getEmotion().getSadness();
         double joy = der.getEmotion().getJoy();
@@ -484,6 +532,33 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private int getRandomNumber(int l, int h) {
         Random r = new Random();
         return r.nextInt(h - l) + l;
+    }
+
+    private boolean emergencyCheck(String input, List<ConceptsResult> cr, List<CategoriesResult> ctr) {
+        String[] sa = input.split(" ");
+        ArrayList<String> s = new ArrayList<String>();
+        for (int i = 0;i < sa.length;i++) {
+            s.add(sa[i]);
+        }
+        ArrayList<String> crs = new ArrayList<String>();
+        for (int i = 0;i < cr.size();i++) {
+            crs.add(cr.get(i).getText());
+        }
+        ArrayList<String> ctrs = new ArrayList<String>();
+        for (int i = 0;i < ctr.size();i++) {
+            ctrs.add(ctr.get(i).getLabel());
+            //Toast.makeText(this, ctrs.get(i), Toast.LENGTH_SHORT).show();
+        }
+        boolean self = false;
+        boolean emergency = false;
+        if (s.contains("myself") || s.contains("me") || s.contains("I")) {
+            self = true;
+        }
+        if (self && ((crs.contains("kill") || crs.contains("violence") || crs.contains("suicide") || crs.contains("hurt"))
+            || (s.contains("kill") || s.contains("violence") || s.contains("suicide") || s.contains("hurt")))) {
+            emergency = true;
+        }
+        return emergency;
     }
 
     @Override

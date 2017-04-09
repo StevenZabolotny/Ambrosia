@@ -1,6 +1,10 @@
 package bitcamp.ambrosia;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -47,6 +51,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
+import java.io.PrintWriter;
+import java.nio.Buffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -58,6 +64,10 @@ import java.util.HashMap;
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
     private File cache;
 	private DoctorData doctors;
+
+    private File resp; // File that contains the hard coded responses
+
+    private final int MIN_STORY_WORD_COUNT = 20;
     private DisorderParser disorderParser;
     private LocationManager locationManager;
     private Location currentLocation;
@@ -151,6 +161,19 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             "Do you need me to contact emergency services for you?"
     };
 
+    String transitions[] = {
+            "Go on.",
+            "Tell me more.",
+            "What else can you tell me?",
+            "I'm listening.",
+            "Uh-huh.",
+            "Yeah...",
+            "I want to hear more from you.",
+            "Keep going.",
+            "Interesting...",
+            "And then what happened?"
+    };
+
     // Variables related to list
     private ListView messagesListView;
     private MessagesListAdapter messagesListAdapter;
@@ -167,6 +190,17 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     private String name;
     private ArrayList<String> history;
+    private CSString respin;
+    private CSString respout;
+    private String prevInput;
+
+    private double sadtot;
+    private double joytot;
+    private double featot;
+    private double madtot;
+    private double distot;
+    private int wordcount;
+    private int entries;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -187,7 +221,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             messages = savedInstanceState.getParcelableArrayList("messages");
         }
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        /*NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        Intent intent = new Intent(this, BroadcastReceiver.class);
+        PendingIntent pintent = PendingIntent.getActivity(this, (int)System.currentTimeMillis(), intent, 0);
+        Notification n = new Notification.Builder(this).setContentTitle(name + ", feeling lonely?").setContentText("Ambrosia would like to talk to you!").setAutoCancel(false).build();
+        notificationManager.notify(0, n);*/
+
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
         listenForLocationChanges();
 
@@ -197,6 +237,31 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             BufferedReader r = new BufferedReader(new FileReader(cache));
             while (r.ready()) {
                 history.add(r.readLine());
+            }
+            r.close();
+        } catch(IOException e) {}
+        /*
+        for (String s:history) {
+            Log.d("test", s + "\n");
+        }*/
+        // Opening response file
+        resp = new File(this.getFilesDir(), "resp.txt");
+        respin = new CSString();
+        respout = new CSString();
+        prevInput = new String();
+        try {
+            BufferedReader r = new BufferedReader(new FileReader(resp));
+            while(r.ready()) {
+                // String is formated "Input : Output"
+                String line = r.readLine();
+                try {
+                    String[] parts = line.split(" : ");
+                    respin.add(parts[0]);
+                    respout.add(parts[1]);
+                } catch(NullPointerException e) {
+                    messagesListAdapter.add(new Message(false, "Resp.txt file parsing error."));
+                    messagesListAdapter.notifyDataSetChanged();
+                }
             }
             r.close();
         } catch(IOException e) {}
@@ -241,23 +306,87 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     Date date = new Date();
                     BufferedWriter w = new BufferedWriter(new FileWriter(cache, true));
                     w.write(date.getTime() + " U " + userInput);
+                    w.newLine();
                     w.close();
                 } catch (FileNotFoundException e) {
                 } catch (IOException e) {
                 }
 
-                if (userInput.length() > 0) {
-                    messagesListAdapter.add(new Message(false, userInput));
-                    messagesListAdapter.notifyDataSetChanged();
-                    if (!"".equals(name)) {
-                        processInput(userInput);
-                    } else {
-                        name = userInput;
-                        SharedPreferences.Editor editor = sp.edit();
-                        editor.putString("name", name);
-                        editor.commit();
-                        sendFromAmbrosia("Hello, " + name + "!");
-                        sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
+
+
+                if(userInput.length() > 0) {
+                    if (userInput.toLowerCase().contains("/read")) {
+                        try {
+                            BufferedReader r = new BufferedReader(new FileReader(resp));
+                            while(r.ready()) {
+                                // String is formated "Input : Output"
+                                String line = r.readLine();
+                                Log.d("aaa", line);
+                            }
+                            r.close();
+                        } catch(IOException e) {}
+                    } else if (userInput.toLowerCase().contains("/clear")) {
+                        try {
+                            PrintWriter pw = new PrintWriter(resp);
+                            pw.close();
+                            respin = new CSString();
+                            respout = new CSString();
+                        } catch (FileNotFoundException e) {
+
+                        }
+                    } else if (userInput.toLowerCase().contains("/add ")) {
+                        // Should replace if prevInput is in respin
+                        if (respin.contains(prevInput)) {
+                            try {
+                                // just rewrite into resp
+                                BufferedWriter w = new BufferedWriter(new FileWriter(cache, false));
+                                respout.set(respin.indexOf(prevInput), userInput.replace("/add ", ""));
+                                for (int i=0; i<respin.size(); i++) {
+                                    w.write(respin.get(i) + " : " + respout.get(i));
+                                    w.newLine();
+                                }
+                                w.close();
+                            } catch (FileNotFoundException e) {}
+                            catch (IOException e) {}
+
+                        } else {
+                            String formated = userInput.replace("/add ", "");
+                            respin.add(prevInput);
+                            respout.add(formated);
+
+                            try {
+                                BufferedWriter w = new BufferedWriter(new FileWriter(resp, true));
+                                w.write(prevInput + " : " + formated);
+                                w.newLine();
+                                w.close();
+                            } catch (FileNotFoundException e) {
+                            } catch (IOException e) {
+                            }
+                        }
+                    } else if (respin.contains(userInput)) {
+                        // Need to parse userinput for trash later and refine compare method
+                        prevInput = userInput;
+                        messagesListAdapter.add(new Message(false, userInput));
+                        messagesListAdapter.notifyDataSetChanged();
+
+                        int iof = respin.indexOf(userInput);
+                        String returnString = respout.get(iof);
+                        sendFromAmbrosia(returnString);
+                    }
+                    else {
+                        prevInput = userInput;
+                        messagesListAdapter.add(new Message(false, userInput));
+                        messagesListAdapter.notifyDataSetChanged();
+                        if (!"".equals(name)) {
+                            processInput(userInput);
+                        } else {
+                            name = userInput;
+                            SharedPreferences.Editor editor = sp.edit();
+                            editor.putString("name", name);
+                            editor.commit();
+                            sendFromAmbrosia("Hello, " + name + "!");
+                            sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
+                        }
                     }
                     editText.getText().clear();
                 }
@@ -329,6 +458,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             Date date = new Date();
             BufferedWriter w = new BufferedWriter(new FileWriter(cache, true));
             w.write(date.getTime() + " A " + s);
+            w.newLine();
             w.close();
         } catch (FileNotFoundException e) {
         } catch (IOException e) {}
@@ -357,6 +487,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        String[] inputs = inputc.split(" ");
+                        wordcount += inputs.length;
+                        entries++;
                         DocumentEmotionResults der = response.getEmotion().getDocument();
                         DocumentSentimentResults dsr = response.getSentiment().getDocument();
                         List<ConceptsResult> cr = response.getConcepts();
@@ -386,6 +519,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 							{
 								message = message;
 							}
+							else if (inputc.charAt(inputc.length() - 1) == '?') {
+                                message = "Don't worry about me, I'm here to hear about you.";
+                            }
 							else if(disorder == "")
 							{
 								message = chooseResponse(der, dsr, cr, ctr);
@@ -491,8 +627,34 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         double fea = der.getEmotion().getFear();
         double mad = der.getEmotion().getAnger();
         double dis = der.getEmotion().getDisgust();
+
+        sadtot += sad;
+        joytot += joy;
+        featot += fea;
+        madtot += mad;
+        distot += dis;
+
+        if (wordcount <= MIN_STORY_WORD_COUNT) {
+            Random r = new Random();
+            int pick = (int)Math.floor(r.nextDouble() * 10);
+            return transitions[pick];
+        }
+
+        sad = sadtot / entries;
+        joy = joytot / entries;
+        fea = featot / entries;
+        mad = madtot / entries;
+        dis = distot / entries;
         double avg = (sad + joy + fea + mad + dis) / 5.0;
         double max = Math.max(Math.max(Math.max(Math.max(sad, joy), fea), mad), dis);
+
+        sadtot = 0;
+        joytot = 0;
+        featot = 0;
+        madtot = 0;
+        distot = 0;
+        wordcount = 0;
+        entries = 0;
 
         String message = "";
         double mod = ((max - avg) / 0.8);
@@ -568,6 +730,24 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     public void onInit(int status) {
         if(status == TextToSpeech.SUCCESS) {
             tts.setLanguage(Locale.ENGLISH);
+        }
+    }
+
+    public class CSString extends ArrayList<String> {
+        @Override
+        public int indexOf(Object o) {
+            String str = (String) o;
+            for (int i = 0; i<this.size(); i++) {
+                if (str.replaceAll("[^a-zA-Z]", "").equalsIgnoreCase(this.get(i).replaceAll("[^a-zA-Z]", ""))) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return indexOf(o) >= 0;
         }
     }
 }

@@ -17,6 +17,8 @@ import com.ibm.watson.developer_cloud.http.ServiceCallback;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.NaturalLanguageUnderstanding;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalysisResults;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalyzeOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.ConceptsOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.ConceptsResult;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.DocumentEmotionResults;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.DocumentSentimentResults;
 import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.EmotionOptions;
@@ -27,9 +29,22 @@ import org.w3c.dom.Text;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
+
+    String conversationStarters[] = {
+            "How are you doing today?",
+            "Do you have anything planned today?",
+            "How was your day today?",
+            "What's up?"
+    };
+
+    String sadMessages[] = {
+            "I'm sorry to hear that."
+    };
 
     // Variables related to list
     private ListView messagesListView;
@@ -69,10 +84,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         messagesListView.setAdapter(messagesListAdapter);
 
         tts = new TextToSpeech(this, this);
-        nlu = new NaturalLanguageUnderstanding("2017-02-27");
-        nlu.setUsernameAndPassword("shadowhunter9636@gmail.com", "Complexpassword1!");
+        nlu = new NaturalLanguageUnderstanding(NaturalLanguageUnderstanding.VERSION_DATE_2017_02_27);
+        nlu.setUsernameAndPassword("b104d1fb-e584-4470-9df2-3fcaed2ccd29", "mfBvfXIcV27E");
+        nlu.setEndPoint("https://gateway.watsonplatform.net/natural-language-understanding/api");
 
-        start();
+        if(savedInstanceState == null) {
+            sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
+        }
 
         sttButton = (ImageButton) findViewById(R.id.button_stt);
         sendButton = (Button) findViewById(R.id.button_send);
@@ -124,12 +142,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         outState.putParcelableArrayList("messages", messages);
     }
 
-    private void start() {
-            // Send question from Ambrosia
-            sendFromAmbrosia("Hello, how was your day?");
-
-    }
-
     private void sendFromAmbrosia(String s) {
         // Add message to the adapter
         messagesListAdapter.add(new Message(true, s));
@@ -141,26 +153,49 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     // Analyze input and then send a message back from Ambrosia
     private void processInput(String input) {
+        SentimentOptions sentiment = new SentimentOptions.Builder().build();
         EmotionOptions emotions = new EmotionOptions.Builder().build();
-        Features features = new Features.Builder().emotion(emotions).build();
+        ConceptsOptions concepts = new ConceptsOptions.Builder().build();
+        Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
         /*nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
-            public void onResponse(AnalysisResults response) {
-                sendFromAmbrosia(response.getAnalyzedText());
-                String res = "";
-                DocumentEmotionResults der = response.getEmotion().getDocument();
-                DocumentSentimentResults ser = response.getSentiment().getDocument();
-                messagesListAdapter.add(new Message(true, res));
-                messagesListAdapter.notifyDataSetChanged();
+            public void onResponse(final AnalysisResults response) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        DocumentEmotionResults der = response.getEmotion().getDocument();
+                        DocumentSentimentResults ser = response.getSentiment().getDocument();
+                        List<ConceptsResult> cr = response.getConcepts();
+                        double sadness = der.getEmotion().getSadness();
+                        String message = "";
+                        if(sadness > 0.1 && sadness < 1) {
+
+                        } else {
+                            message = "I'm sorry, I'm not quite sure I understand. Can you please clarify?";
+                        }
+                        sendFromAmbrosia(message);
+                    }
+                });
+
             }
 
             @Override
-            public void onFailure(Exception e) {
-
+            public void onFailure(final Exception e) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
             }
         });*/
 
+    }
+
+    int getRandomNumber(int l, int h) {
+        Random r = new Random();
+        return r.nextInt(h - l) + l;
     }
 
     @Override

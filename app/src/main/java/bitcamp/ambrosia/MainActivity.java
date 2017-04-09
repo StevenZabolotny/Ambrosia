@@ -7,6 +7,7 @@ import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -29,18 +30,24 @@ import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.Se
 
 import org.w3c.dom.Text;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
+    private File cache;
 
     String conversationStarters[] = {
             "How are you doing today?",
@@ -147,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     private String name;
     private HashMap<String, Integer> disorders;
+    private ArrayList<String> history;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,6 +170,19 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         } else {
             // Load messages from savedState
             messages = savedInstanceState.getParcelableArrayList("messages");
+        }
+
+        history = new ArrayList<String>();
+        cache = new File(this.getFilesDir(), "cache.txt");
+        try {
+            BufferedReader r = new BufferedReader(new FileReader(cache));
+            while(r.ready()) {
+                history.add(r.readLine());
+            }
+            r.close();
+        } catch(IOException e) {}
+        for (String s:history) {
+            Log.d("test", s + "\n");
         }
 
         messagesListAdapter = new MessagesListAdapter(this, messages);
@@ -199,6 +220,15 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             @Override
             public void onClick(View v) {
                 String userInput = editText.getText().toString().trim();
+
+                try {
+                    Date date = new Date();
+                    BufferedWriter w = new BufferedWriter(new FileWriter(cache, true));
+                    w.write(date.getTime() + " U " + userInput);
+                    w.close();
+                } catch (FileNotFoundException e) {
+                } catch (IOException e) {}
+
                 if(userInput.length() > 0) {
                     messagesListAdapter.add(new Message(false, userInput));
                     messagesListAdapter.notifyDataSetChanged();
@@ -240,18 +270,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     protected void onStop() {
         super.onStop();
 
-        FileOutputStream fos = null;
-
-        try {
-            fos = openFileOutput("conversations", Context.MODE_APPEND);
-            // fos.write(bytes);
-            fos.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
     }
 
     @Override
@@ -261,10 +279,19 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     }
 
     private void sendFromAmbrosia(String s) {
+        try {
+            Date date = new Date();
+            BufferedWriter w = new BufferedWriter(new FileWriter(cache, true));
+            w.write(date.getTime() + " A " + s);
+            w.close();
+        } catch (FileNotFoundException e) {
+        } catch (IOException e) {}
+
         // Add message to the adapter
         messagesListAdapter.add(new Message(true, s));
         // Signal update
         messagesListAdapter.notifyDataSetChanged();
+        messagesListView.smoothScrollToPosition(messagesListAdapter.getCount() - 1);
 
         tts.speak(s, TextToSpeech.QUEUE_ADD, null);
     }
@@ -276,22 +303,16 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         ConceptsOptions concepts = new ConceptsOptions.Builder().build();
         Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
-        /*nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
+        nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
             public void onResponse(final AnalysisResults response) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         DocumentEmotionResults der = response.getEmotion().getDocument();
-                        DocumentSentimentResults ser = response.getSentiment().getDocument();
+                        DocumentSentimentResults dsr = response.getSentiment().getDocument();
                         List<ConceptsResult> cr = response.getConcepts();
-                        double sadness = der.getEmotion().getSadness();
-                        String message = "";
-                        if(sadness > 0.1 && sadness < 1) {
-
-                        } else {
-                            message = "I'm sorry, I'm not quite sure I understand. Can you please clarify?";
-                        }
+                        String message = chooseResponse(der, dsr, cr);
                         sendFromAmbrosia(message);
                     }
                 });
@@ -307,11 +328,59 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     }
                 });
             }
-        });*/
+        });
 
     }
 
-    int getRandomNumber(int l, int h) {
+    private String chooseResponse(DocumentEmotionResults der, DocumentSentimentResults dsr, List<ConceptsResult> cr) {
+        double sent = dsr.getScore();
+        double sad = der.getEmotion().getSadness();
+        double joy = der.getEmotion().getJoy();
+        double fea = der.getEmotion().getFear();
+        double mad = der.getEmotion().getAnger();
+        double dis = der.getEmotion().getDisgust();
+        double avg = (sad + joy + fea + mad + dis) / 5.0;
+        double max = Math.max(Math.max(Math.max(Math.max(sad, joy), fea), mad), dis);
+
+        String message = "";
+        double mod = ((max - avg) / 0.8);
+        int pick1 = modifiedRandom(mod);
+        int pick2 = modifiedRandom(mod);
+        if (max <= 0.2) {
+            message = "I'm sorry, I'm not quite sure I understand. Can you please clarify?";
+        } else if (max == sad) {
+            message = sadMessages[pick2] + " " + sadQuestions[pick1];
+        } else if (max == joy) {
+            message = happyMessages[pick2] + " " + happyQuestions[pick1];
+        } else if (max == fea) {
+            message = fearMessages[pick2] + " " + fearQuestions[pick1];
+        } else if (max == mad) {
+            message = angryMessages[pick2] + " " + angryQuestions[pick1];
+        } else if (max == dis) {
+            message = disgustMessages[pick2] + " " + disgustQuestions[pick1];
+        } else {
+            message = "I'm sorry, I'm not quite sure I understand. Can you please clarify?";
+        }
+        return message;
+    }
+
+    private int modifiedRandom(double mod) {
+        mod = (mod - 0.5) / 5;
+        Random r = new Random();
+        double pick = r.nextDouble();
+        if (pick <= (0.2 - 2*mod)) {
+            return 0;
+        } else if (pick <= (0.4 - 3*mod)) {
+            return 1;
+        } else if (pick <= (0.6 - 3*mod)) {
+            return 2;
+        } else if (pick <= (0.8 - 2*mod)) {
+            return 3;
+        }
+        return 4;
+    }
+
+    private int getRandomNumber(int l, int h) {
         Random r = new Random();
         return r.nextInt(h - l) + l;
     }

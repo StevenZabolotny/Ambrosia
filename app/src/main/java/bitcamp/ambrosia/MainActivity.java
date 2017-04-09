@@ -12,23 +12,34 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.NaturalLanguageUnderstanding;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalysisResults;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalyzeOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.DocumentEmotionResults;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.DocumentSentimentResults;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.EmotionOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.Features;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.SentimentOptions;
+
 import org.w3c.dom.Text;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
     // Variables related to list
-    ListView messagesListView;
-    MessagesListAdapter messagesListAdapter;
-    ArrayList<Message> messages;
+    private ListView messagesListView;
+    private MessagesListAdapter messagesListAdapter;
+    private ArrayList<Message> messages;
 
     // Variables related to user input
-    Button sttButton;
-    Button sendButton;
-    EditText editText;
+    private Button sttButton;
+    private Button sendButton;
+    private EditText editText;
 
     private TextToSpeech tts;
+    private NaturalLanguageUnderstanding nlu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +59,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         messagesListView.setAdapter(messagesListAdapter);
 
         tts = new TextToSpeech(this, this);
+        nlu = new NaturalLanguageUnderstanding("2017-02-27");
+        nlu.setUsernameAndPassword("shadowhunter9636@gmail.com", "Complexpassword1!");
 
         start();
 
@@ -85,7 +98,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == 1 && resultCode == RESULT_OK) {
             ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            if(results.size() == 0 || results.size() > 2) {
+            //if(results.size() == 0 || results.size() > 2) {
+            if(results.size() == 0) {
                 Toast.makeText(this, "Sorry, Try speaking a bit clearer", Toast.LENGTH_LONG).show();
             } else {
                 editText.getText().clear();
@@ -102,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     private void start() {
             // Send question from Ambrosia
-            sendFromAmbrosia("Yo sup b");
+            sendFromAmbrosia("Hello, how was your day?");
 
     }
 
@@ -117,10 +131,22 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     // Analyze input and then send a message back from Ambrosia
     private void processInput(String input) {
-        sendFromAmbrosia("Cool story bro");
+        EmotionOptions emotions = new EmotionOptions.Builder().build();
+        Features features = new Features.Builder().emotion(emotions).build();
+        AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
+        AnalysisResults results = nlu.analyze(parameters).execute();
+        sendFromAmbrosia(results.getAnalyzedText());
+        String res = "";
+        DocumentEmotionResults der = results.getEmotion().getDocument();
+        DocumentSentimentResults ser = results.getSentiment().getDocument();
+        messagesListAdapter.add(new Message(true, res));
+        messagesListAdapter.notifyDataSetChanged();
     }
 
     @Override
     public void onInit(int status) {
+        if(status == TextToSpeech.SUCCESS) {
+            tts.setLanguage(Locale.ENGLISH);
+        }
     }
 }

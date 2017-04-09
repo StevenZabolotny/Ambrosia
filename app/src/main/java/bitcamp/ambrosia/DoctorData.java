@@ -42,6 +42,9 @@ public class DoctorData {
 	   {
 		   return null;
 	   }
+	   catch(JSONException e) {
+		   return null;
+	   }
    }
    
    static String convertStreamToString(java.io.InputStream is) {

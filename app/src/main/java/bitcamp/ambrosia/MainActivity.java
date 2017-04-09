@@ -1,6 +1,8 @@
 package bitcamp.ambrosia;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
@@ -129,8 +131,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             "Do you need me to contact emergency services for you?"
     };
 
-    String name;
-
     // Variables related to list
     private ListView messagesListView;
     private MessagesListAdapter messagesListAdapter;
@@ -145,15 +145,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private TextToSpeech tts;
     private NaturalLanguageUnderstanding nlu;
 
-    private File cache;
     private String name;
     private HashMap<String, Integer> disorders;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        cache = new File(this.getFilesDir(), "cache.txt");
 
         setContentView(R.layout.activity_main);
         final SharedPreferences sp = getSharedPreferences("", Context.MODE_PRIVATE);

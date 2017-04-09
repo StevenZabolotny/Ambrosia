@@ -121,9 +121,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             "What did you do after?",
             "Are you alright?",
             "I hope everyone is safe...",
-            "Do you have any friends you can ask for help?"
+            "Do you have any friends you can ask for help?",
             "Do you need me to contact emergency services for you?"
-    }
+    };
 
     // Variables related to list
     private ListView messagesListView;

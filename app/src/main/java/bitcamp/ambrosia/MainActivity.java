@@ -1,16 +1,21 @@
 package bitcamp.ambrosia;
 
+import android.content.Context;
 import android.content.Intent;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 
 import org.w3c.dom.Text;
 
@@ -24,15 +29,21 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     ArrayList<Message> messages;
 
     // Variables related to user input
-    Button sttButton;
+    ImageButton sttButton;
     Button sendButton;
     EditText editText;
 
     private TextToSpeech tts;
 
+    public static int maxWidth;
+    public static int maxHeight;
+
+    private AmbrosiaChatView acv;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         if(savedInstanceState == null) {
             // If the instance is null, this app was just opened
@@ -49,9 +60,14 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         tts = new TextToSpeech(this, this);
 
+        /*WindowManager mWinMgr = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
+        maxWidth = mWinMgr.getDefaultDisplay().getWidth();
+        maxHeight = mWinMgr.getDefaultDisplay().getHeight();
+        acv = new AmbrosiaChatView(this);*/
+
         start();
 
-        sttButton = (Button) findViewById(R.id.button_stt);
+        sttButton = (ImageButton) findViewById(R.id.button_stt);
         sendButton = (Button) findViewById(R.id.button_send);
         editText = (EditText) findViewById(R.id.text_edit);
 
@@ -109,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private void sendFromAmbrosia(String s) {
         // Add message to the adapter
         messagesListAdapter.add(new Message(true, s));
+
         // Signal update
         messagesListAdapter.notifyDataSetChanged();
 

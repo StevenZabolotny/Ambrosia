@@ -1,10 +1,12 @@
 package bitcamp.ambrosia;
 
 import android.content.Context;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ public class MessagesListAdapter extends BaseAdapter {
             v = layoutInflater.inflate(R.layout.item_messages, null);
             msgHolder.name = (TextView) v.findViewById(R.id.name_sender);
             msgHolder.message = (TextView) v.findViewById(R.id.message);
+            msgHolder.bg = (LinearLayout) v.findViewById(R.id.msgbg);
             v.setTag(msgHolder);
         } else {
             msgHolder = (MessageViewHolder) v.getTag();
@@ -59,8 +62,16 @@ public class MessagesListAdapter extends BaseAdapter {
         Message message = (Message) getItem(position);
         if(message.getSentByApp()) {
             msgHolder.name.setText("Ambrosia");
+            msgHolder.bg.setBackgroundResource(R.drawable.ambrosiachat);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT);
+            params.gravity = Gravity.LEFT;
+            msgHolder.bg.setLayoutParams(params);
         } else {
             msgHolder.name.setText("You");
+            msgHolder.bg.setBackgroundResource(R.drawable.userchat);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT);
+            params.gravity = Gravity.RIGHT;
+            msgHolder.bg.setLayoutParams(params);
         }
 
         msgHolder.message.setText(message.getMessage());
@@ -71,5 +82,6 @@ public class MessagesListAdapter extends BaseAdapter {
     class MessageViewHolder {
         private TextView name;
         private TextView message;
+        private LinearLayout bg;
     }
 }

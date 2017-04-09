@@ -25,6 +25,7 @@ import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.Se
 
 import org.w3c.dom.Text;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -43,9 +44,16 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private TextToSpeech tts;
     private NaturalLanguageUnderstanding nlu;
 
+    private File cache;
+    private String name;
+    private HashMap<String, int> disorders;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        cache = new File(this.getFilesDir(), "cache.txt");
+
         setContentView(R.layout.activity_main);
         if(savedInstanceState == null) {
             // If the instance is null, this app was just opened
@@ -136,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         EmotionOptions emotions = new EmotionOptions.Builder().build();
         Features features = new Features.Builder().emotion(emotions).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
-        nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
+        /*nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
             public void onResponse(AnalysisResults response) {
                 sendFromAmbrosia(response.getAnalyzedText());
@@ -151,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             public void onFailure(Exception e) {
 
             }
-        });
+        });*/
 
     }
 

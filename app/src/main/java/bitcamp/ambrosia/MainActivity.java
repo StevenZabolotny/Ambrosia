@@ -57,7 +57,7 @@ import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
     private File cache;
-
+	private DoctorData doctors;
     private DisorderParser disorderParser;
     private LocationManager locationManager;
     private Location currentLocation;
@@ -178,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             // If the instance is null, this app was just opened
             // Set the messages list to a new empty one
             disorderParser = new DisorderParser();
+			doctors = new DoctorData();
             messages = new ArrayList<Message>();
 
             reloadPastMessages();
@@ -362,7 +363,105 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         List<CategoriesResult> ctr = response.getCategories();
                         String message = "";
                         if (!emergencyCheck(inputc, cr, ctr)) {
-                            message = chooseResponse(der, dsr, cr, ctr);
+							String[] splitStr = input.trim().split("\\s+");
+							for(int i = 0; i < splitStr.size(); i++)
+							{
+								if(splitStr[i] == "doctor" || splitStr[i] == "doctor." || splitStr[i] == "doctor?")
+								{
+									String[][] options = doctors.getData(splitStr[i-1], "39.0016", "-77.0353");
+									message = "Here are some for you to choose from: \n";
+									for(int i = 0; i < 3; i++)
+									{
+										message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+									}
+									break
+								}
+								else
+								{
+									disorderParser.processKeyWord(splitStr[i]);
+								}
+							}
+							String disorder = disorderParser.checkWeights()
+							if(message != "")
+							{
+								message = message;
+							}
+							else if(disorder == "")
+							{
+								message = chooseResponse(der, dsr, cr, ctr);
+							}
+                            else if(disorder == "mood")
+							{
+								message = "It appears that you are suffering from a severe mood disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "anxiety")
+							{
+								message = "It appears that you are suffering from a severe anxiety disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "psychotic")
+							{
+								message = "It appears that you are suffering from a severe psychotic disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "eating")
+							{
+								message = "It appears that you are suffering from a severe eating disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "impulse")
+							{
+								message = "It appears that you are suffering from a severe impulse disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "personality")
+							{
+								message = "It appears that you are suffering from a severe personality disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "ocd")
+							{
+								message = "It appears that you are suffering from a severe obsessive compulsive disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
+							else if(disorder == "ptsd")
+							{
+								message = "It appears that you are suffering from a severe post traumatic stress disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
+								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+								for(int i = 0; i < 3; i++)
+								{
+									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+								}
+							}
                         } else {
                             message = "EMERGENCY DETECTED! If you are thinking about hurting yourself or anyone else or believe that you are not in a good state of mind, please:\nCall 911 for Emergency Services\nText CONNECT to 741741 for Mental Health Hotlines\nCall 1-800-273-8255 for the National Suicide Prevention Lifeline.";
                         }

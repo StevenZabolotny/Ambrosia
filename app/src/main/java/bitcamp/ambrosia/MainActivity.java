@@ -1,6 +1,10 @@
 package bitcamp.ambrosia;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
@@ -27,6 +31,10 @@ import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.Se
 
 import org.w3c.dom.Text;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -45,10 +53,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             "I'm sorry to hear that."
     };
 
+    String name;
+
     // Variables related to list
     private ListView messagesListView;
     private MessagesListAdapter messagesListAdapter;
     private ArrayList<Message> messages;
+    private ArrayList<Message> pastMessages;
 
     // Variables related to user input
     ImageButton sttButton;
@@ -62,10 +73,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        final SharedPreferences sp = getSharedPreferences("", Context.MODE_PRIVATE);
         if(savedInstanceState == null) {
             // If the instance is null, this app was just opened
             // Set the messages list to a new empty one
-            messages = new ArrayList<Message>();
+                messages = new ArrayList<Message>();
+                reloadPastMessages();
         } else {
             // Load messages from savedState
             messages = savedInstanceState.getParcelableArrayList("messages");
@@ -80,7 +93,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         nlu.setUsernameAndPassword("b104d1fb-e584-4470-9df2-3fcaed2ccd29", "mfBvfXIcV27E");
         nlu.setEndPoint("https://gateway.watsonplatform.net/natural-language-understanding/api");
 
-        if(savedInstanceState == null) {
+        name = sp.getString("name", "");
+        if("".equals(name)) {
+            sendFromAmbrosia("Hello, my name is Ambrosia. I'm a personal chatbot with an emphasis on mental health. What's your name?");
+        } else if(savedInstanceState == null) {
             sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
         }
 
@@ -106,11 +122,23 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 if(userInput.length() > 0) {
                     messagesListAdapter.add(new Message(false, userInput));
                     messagesListAdapter.notifyDataSetChanged();
-                    processInput(userInput);
+                    if(!"".equals(name)) {
+                        processInput(userInput);
+                    } else {
+                        name = userInput;
+                        SharedPreferences.Editor editor = sp.edit();
+                        editor.putString("name", name);
+                        editor.commit();
+                        sendFromAmbrosia("Hello, " + name + "!");
+                        sendFromAmbrosia(conversationStarters[getRandomNumber(0, 4)]);
+                    }
                     editText.getText().clear();
                 }
             }
         });
+    }
+
+    private void reloadPastMessages() {
     }
 
     @Override
@@ -118,7 +146,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == 1 && resultCode == RESULT_OK) {
             ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            //if(results.size() == 0 || results.size() > 2) {
             if(results.size() == 0) {
                 Toast.makeText(this, "Sorry, Try speaking a bit clearer", Toast.LENGTH_LONG).show();
             } else {
@@ -126,6 +153,24 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 editText.getText().append(results.get(0));
             }
         }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        FileOutputStream fos = null;
+
+        try {
+            fos = openFileOutput("conversations", Context.MODE_APPEND);
+            // fos.write(bytes);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override

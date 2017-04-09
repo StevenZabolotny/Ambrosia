@@ -1,10 +1,6 @@
 package bitcamp.ambrosia;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
@@ -35,6 +31,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -69,9 +66,16 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private TextToSpeech tts;
     private NaturalLanguageUnderstanding nlu;
 
+    private File cache;
+    private String name;
+    private HashMap<String, int> disorders;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        cache = new File(this.getFilesDir(), "cache.txt");
+
         setContentView(R.layout.activity_main);
         final SharedPreferences sp = getSharedPreferences("", Context.MODE_PRIVATE);
         if(savedInstanceState == null) {
@@ -146,6 +150,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == 1 && resultCode == RESULT_OK) {
             ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            //if(results.size() == 0 || results.size() > 2) {
             if(results.size() == 0) {
                 Toast.makeText(this, "Sorry, Try speaking a bit clearer", Toast.LENGTH_LONG).show();
             } else {
@@ -195,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         ConceptsOptions concepts = new ConceptsOptions.Builder().build();
         Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
-        nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
+        /*nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
             public void onResponse(final AnalysisResults response) {
                 runOnUiThread(new Runnable() {
@@ -226,7 +231,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     }
                 });
             }
-        });
+        });*/
 
     }
 

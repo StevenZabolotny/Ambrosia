@@ -17,7 +17,7 @@ import okhttp3.Response;
 public class DoctorData {
 
    public static void getData(String type, String lat, String lon, final MainActivity a) {
-		String urlToRead = "https://api.betterdoctor.com/2016-03-01/doctors?location=" + lat + "%2C" + lon + "%2C100&user_location=" + lat + "%2C" + lon + "&skip=0&limit=3&user_key=027c0eae17c1551502696f2dfc9ae2eb";
+		String urlToRead = "https://api.betterdoctor.com/2016-03-01/doctors?query=" + type + "&location=" + lat + "%2C" + lon + "%2C25&user_location=" + lat + "%2C" + lon + "&skip=0&limit=3&user_key=027c0eae17c1551502696f2dfc9ae2eb";
 
 		   OkHttpClient client = new OkHttpClient();
 		   Request req = new Request.Builder().url(urlToRead).build();
@@ -36,7 +36,7 @@ public class DoctorData {
 					   JSONArray practices = data.getJSONArray("data");
 					   for (int i = 0; i < 3; i++) {
 						   JSONObject addressData = practices.getJSONObject(i).getJSONArray("practices").getJSONObject(0).getJSONObject("visit_address");
-						   String address = addressData.getString("street") + "\n" + addressData.getString("city") + ", " + "MD" + " " + addressData.getString("zip");
+						   String address = addressData.getString("street") + "\n" + addressData.getString("city") + ", " + addressData.getString("state") + " " + addressData.getString("zip");
 						   JSONObject nameData = practices.getJSONObject(i).getJSONObject("profile");
 						   String name = nameData.getString("first_name") + " " + nameData.getString("last_name") + " " + nameData.getString("title");
 						   JSONArray phoneData = practices.getJSONObject(i).getJSONArray("practices").getJSONObject(0).getJSONArray("phones");

@@ -61,16 +61,17 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.HashMap;
 
-public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
+public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener,DoctorData.Callbacks {
     private File cache;
 	private DoctorData doctors;
 
     private File resp; // File that contains the hard coded responses
 
-    private final int MIN_STORY_WORD_COUNT = 20;
+    private final int MIN_STORY_WORD_COUNT = 10;
     private DisorderParser disorderParser;
     private LocationManager locationManager;
     private Location currentLocation;
+    private String[][] data;
 
     String conversationStarters[] = {
             "How are you doing today?",
@@ -481,6 +482,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         ConceptsOptions concepts = new ConceptsOptions.Builder().build();
         Features features = new Features.Builder().sentiment(sentiment).emotion(emotions).concepts(concepts).categories(categories).build();
         AnalyzeOptions parameters = new AnalyzeOptions.Builder().text(input).features(features).build();
+        final MainActivity m = this;
         nlu.analyze(parameters).enqueue(new ServiceCallback<AnalysisResults>() {
             @Override
             public void onResponse(final AnalysisResults response) {
@@ -496,103 +498,121 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         List<CategoriesResult> ctr = response.getCategories();
                         String message = "";
                         if (!emergencyCheck(inputc, cr, ctr)) {
-							String[] splitStr = input.trim().split("\\s+");
-							for(int i = 0; i < splitStr.size(); i++)
+							String[] splitStr = inputc.trim().split("\\s+");
+							for(int i = 0; i < splitStr.length; i++)
 							{
-								if(splitStr[i] == "doctor" || splitStr[i] == "doctor." || splitStr[i] == "doctor?")
+								if(splitStr[i].equals("doctor") || splitStr[i].equals("doctor.") || splitStr[i].equals("doctor?"))
 								{
-									String[][] options = doctors.getData(splitStr[i-1], "39.0016", "-77.0353");
+                                    doctors.getData(splitStr[i-1], "39.0016", "-77.0353", m);
+                                    timeWaste();
+                                    String[][] options = data;
 									message = "Here are some for you to choose from: \n";
-									for(int i = 0; i < 3; i++)
+									for(int j = 0; j < 3; j++)
 									{
-										message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
+										message = message + "Name: " + options[j][0] + "\n Phone: " + options[j][2] + "\n Address: " + options[j][1] + "\n\n";
 									}
-									break
+									break;
 								}
 								else
 								{
 									disorderParser.processKeyWord(splitStr[i]);
 								}
 							}
-							String disorder = disorderParser.checkWeights()
-							if(message != "")
+							String disorder = disorderParser.checkWeights();
+							if(!message.equals(""))
 							{
 								message = message;
 							}
 							else if (inputc.charAt(inputc.length() - 1) == '?') {
                                 message = "Don't worry about me, I'm here to hear about you.";
                             }
-							else if(disorder == "")
+							else if(disorder.equals(""))
 							{
 								message = chooseResponse(der, dsr, cr, ctr);
 							}
-                            else if(disorder == "mood")
+                            else if(disorder.equals("mood"))
 							{
 								message = "It appears that you are suffering from a severe mood disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "anxiety")
+							else if(disorder.equals("anxiety"))
 							{
 								message = "It appears that you are suffering from a severe anxiety disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "psychotic")
+							else if(disorder.equals("psychotic"))
 							{
 								message = "It appears that you are suffering from a severe psychotic disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "eating")
+							else if(disorder.equals("eating"))
 							{
 								message = "It appears that you are suffering from a severe eating disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "impulse")
+							else if(disorder.equals("impulse"))
 							{
 								message = "It appears that you are suffering from a severe impulse disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "personality")
+							else if(disorder.equals("personality"))
 							{
 								message = "It appears that you are suffering from a severe personality disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "ocd")
+							else if(disorder.equals("ocd"))
 							{
 								message = "It appears that you are suffering from a severe obsessive compulsive disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
 								}
 							}
-							else if(disorder == "ptsd")
+							else if(disorder.equals("ptsd"))
 							{
 								message = "It appears that you are suffering from a severe post traumatic stress disorder. Please arrange an appointment with a psychiatrist. Here are some for you to choose from: \n";
-								String[][] options = doctors.getData("Psychiatric", "39.0016", "-77.0353");
+                                doctors.getData("Psychiatric", "39.0016", "-77.0353", m);
+                                timeWaste();
+                                String[][] options = data;
 								for(int i = 0; i < 3; i++)
 								{
 									message = message + "Name: " + options[i][0] + "\n Phone: " + options[i][2] + "\n Address: " + options[i][1] + "\n\n";
@@ -730,6 +750,23 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     public void onInit(int status) {
         if(status == TextToSpeech.SUCCESS) {
             tts.setLanguage(Locale.ENGLISH);
+        }
+    }
+
+    @Override
+    public void onResponse(String[][] test) {
+        data = test;
+    }
+
+    public void timeWaste() {
+        ArrayList<Integer> one = new ArrayList<Integer>();
+        ArrayList<Integer> two = new ArrayList<Integer>();
+        for (int i = 0;i < 2000;i++) {
+            for (int j = 0;j < 2000;j++) {
+                one.add(i);
+                two.add(j);
+                one.set(i, two.get(j));
+            }
         }
     }
 

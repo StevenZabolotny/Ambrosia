@@ -160,38 +160,45 @@ public class DisorderParser {
         return disorders.get(key);
     }
 	
-	public String checkWeights();
-	{
+	public String checkWeights() {
 		if(getWeight("anxiety") >= 3)
 		{
+            disorders.put("anxiety", 0);
 			return "anxiety";
 		}
 		else if(getWeight("mood") >= 3)
 		{
+            disorders.put("mood", 0);
 			return "mood";
 		}
 		else if(getWeight("psychotic") >= 3)
 		{
+            disorders.put("psychotic", 0);
 			return "psychotic";
 		}
 		else if(getWeight("eating") >= 3)
 		{
+            disorders.put("eating", 0);
 			return "eating";
 		}
 		else if(getWeight("impulse") >= 3)
 		{
+            disorders.put("impulse", 0);
 			return "impulse";
 		}
 		else if(getWeight("personality") >= 3)
 		{
+            disorders.put("personality", 0);
 			return "personality";
 		}
 		else if(getWeight("ocd") >= 3)
 		{
+            disorders.put("ocd", 0);
 			return "ocd";
 		}
 		else if(getWeight("ptsd") >= 3)
 		{
+            disorders.put("ptsd", 0);
 			return "ptsd";
 		}
 		else
